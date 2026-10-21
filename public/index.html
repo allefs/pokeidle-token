@@ -1,0 +1,333 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#0a111b">
+<title>Poké Idle — Market Monitor</title>
+<style>
+  :root {
+    color-scheme: dark;
+    --bg: #080e17; --panel: #101a28; --panel-2: #142235; --line: #26374c;
+    --text: #edf4ff; --muted: #91a3ba; --teal: #48e0c1; --blue: #7fa8ff;
+    --gold: #ffd37d; --red: #ff9c9c; --green: #8ee6ae; --shadow: 0 14px 38px rgba(0,0,0,.22);
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: radial-gradient(ellipse at 6% 0%, #172b40 0%, var(--bg) 42%); color: var(--text); font: 14px/1.45 Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
+  button, input, select { font: inherit; }
+  button, input, select { border: 1px solid var(--line); border-radius: 10px; background: #0c1522; color: var(--text); }
+  input, select { min-width: 0; width: 100%; padding: 10px 11px; outline: none; }
+  input:focus, select:focus { border-color: var(--teal); box-shadow: 0 0 0 3px #48e0c119; }
+  button { padding: 9px 13px; cursor: pointer; transition: .15s ease; white-space: nowrap; }
+  button:hover { border-color: #56738f; transform: translateY(-1px); }
+  button.primary { background: var(--teal); color: #04241f; border-color: var(--teal); font-weight: 800; }
+  button.subtle { background: #122134; }
+  .wrap { width: min(1500px, calc(100% - 36px)); margin: 0 auto; padding: 26px 0 46px; }
+  header { display: flex; align-items: center; justify-content: space-between; gap: 18px; margin-bottom: 26px; }
+  .brand { display: flex; align-items: center; gap: 12px; min-width: 0; }
+  .logo { width: 45px; height: 45px; border-radius: 14px; display: grid; place-items: center; font-size: 24px; background: linear-gradient(140deg, #48e0c1, #7fa8ff); box-shadow: 0 8px 26px #48e0c122; }
+  .brand h1 { font-size: 17px; letter-spacing: -.02em; margin: 0; }
+  .brand p { margin: 3px 0 0; color: var(--muted); font-size: 12px; }
+  .head-right { display: flex; align-items: center; justify-content: flex-end; gap: 9px; flex-wrap: wrap; }
+  .status { display: inline-flex; align-items: center; gap: 7px; border: 1px solid var(--line); border-radius: 999px; background: #0d1927; padding: 7px 11px; color: var(--muted); font-size: 12px; }
+  .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--gold); box-shadow: 0 0 9px currentColor; }
+  .dot.ok { background: var(--green); } .dot.bad { background: var(--red); }
+  .hero { display: flex; justify-content: space-between; align-items: flex-end; gap: 20px; margin-bottom: 19px; }
+  .eyebrow { color: var(--teal); text-transform: uppercase; font-weight: 800; letter-spacing: .14em; font-size: 10px; }
+  .hero h2 { margin: 6px 0 6px; font-size: clamp(26px, 3.5vw, 39px); line-height: 1.08; letter-spacing: -.045em; }
+  .hero p { margin: 0; color: var(--muted); max-width: 680px; }
+  .readonly { border: 1px solid #22554f; color: var(--teal); background: #0d2b2a55; border-radius: 9px; padding: 8px 10px; font-size: 11px; font-weight: 800; letter-spacing: .04em; white-space: nowrap; }
+  .stats { display: grid; grid-template-columns: repeat(4, minmax(0,1fr)); gap: 12px; margin-bottom: 17px; }
+  .stat { border: 1px solid var(--line); border-radius: 14px; padding: 15px 16px; background: linear-gradient(145deg, #142235, #0e1724); box-shadow: var(--shadow); }
+  .stat .label { font-size: 11px; color: var(--muted); }
+  .stat .value { font-size: 25px; line-height: 1.2; font-weight: 800; letter-spacing: -.04em; margin-top: 7px; font-variant-numeric: tabular-nums; }
+  .stat .hint { color: #7890a9; font-size: 11px; margin-top: 5px; }
+  .filters { border: 1px solid var(--line); border-radius: 16px; background: #0e1826; padding: 17px; margin-bottom: 18px; box-shadow: var(--shadow); }
+  .filter-top { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 15px; }
+  .filter-title { margin: 0; font-size: 14px; font-weight: 800; }
+  .filter-note { font-size: 11px; color: var(--muted); }
+  .filter-grid { display: grid; grid-template-columns: 1.7fr 1fr 1fr 1fr; gap: 13px; }
+  .field { min-width: 0; }
+  .field label { display: block; margin: 0 0 6px; color: var(--muted); font-size: 11px; font-weight: 700; }
+  .range { display: grid; grid-template-columns: 1fr 1fr; gap: 7px; }
+  .range input { font-variant-numeric: tabular-nums; }
+  .filter-actions { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-top: 15px; }
+  .filter-actions .left { color: var(--muted); font-size: 11px; }
+  .action-group { display: flex; gap: 8px; }
+  .notice { display: none; margin: 0 0 14px; padding: 12px 14px; border: 1px solid #76513c; border-radius: 11px; background: #39231555; color: #ffd0aa; }
+  .notice.show { display: block; }
+  .notice.error { border-color: #7e3e48; background: #3a172255; color: #ffc6cd; }
+  .table-shell { overflow: hidden; border: 1px solid var(--line); border-radius: 16px; background: #0d1724; box-shadow: var(--shadow); }
+  .table-heading { display: flex; align-items: center; justify-content: space-between; padding: 15px 17px; gap: 12px; border-bottom: 1px solid var(--line); }
+  .table-heading h3 { font-size: 14px; margin: 0; }
+  .table-heading span { color: var(--muted); font-size: 11px; }
+  .table-scroll { overflow: auto; max-height: 66vh; }
+  table { width: 100%; border-collapse: separate; border-spacing: 0; min-width: 940px; }
+  th { position: sticky; top: 0; z-index: 1; background: #142235; color: #9db1c8; text-align: left; text-transform: uppercase; letter-spacing: .07em; font-size: 10px; padding: 12px 13px; border-bottom: 1px solid var(--line); }
+  td { border-bottom: 1px solid #1b2a3d; padding: 12px 13px; vertical-align: middle; font-size: 12px; }
+  tbody tr:hover { background: #14223588; }
+  tbody tr:last-child td { border-bottom: 0; }
+  .pokemon { display: flex; align-items: center; gap: 11px; min-width: 210px; }
+  .sprite { width: 39px; height: 39px; flex: 0 0 39px; border: 1px solid #293d55; border-radius: 12px; display: grid; place-items: center; background: #15253a; color: var(--teal); font-weight: 900; font-size: 13px; overflow: hidden; }
+  .sprite img { width: 100%; height: 100%; object-fit: contain; image-rendering: auto; }
+  .name { font-weight: 800; font-size: 12px; }
+  .sub { color: var(--muted); font-size: 10px; margin-top: 3px; }
+  .tag { display: inline-block; padding: 3px 6px; border-radius: 6px; background: #1b2d42; color: #b4c8df; font-size: 10px; margin: 2px 3px 0 0; }
+  .tag.shiny { color: #ffd98c; background: #48361577; border: 1px solid #79602d; }
+  .number { font-weight: 800; font-variant-numeric: tabular-nums; }
+  .quality { color: var(--blue); font-weight: 800; font-variant-numeric: tabular-nums; }
+  .price { color: var(--gold); font-weight: 900; font-size: 13px; font-variant-numeric: tabular-nums; white-space: nowrap; }
+  .currency { color: #9fb0c4; font-size: 10px; font-weight: 700; }
+  .muted { color: var(--muted); }
+  .empty { padding: 55px 20px; text-align: center; color: var(--muted); }
+  .empty strong { display: block; color: var(--text); font-size: 15px; margin-bottom: 5px; }
+  footer { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; padding: 14px 3px 0; color: #71869e; font-size: 11px; }
+  .spinner { display:inline-block; width:12px; height:12px; border:2px solid #496277; border-top-color:var(--teal); border-radius:50%; animation:spin .8s linear infinite; vertical-align:-2px; margin-right:6px; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  @media (max-width: 1020px) { .filter-grid { grid-template-columns: repeat(2,minmax(0,1fr)); } .stats { grid-template-columns: repeat(2,minmax(0,1fr)); } }
+  @media (max-width: 650px) { .wrap { width: calc(100% - 20px); padding-top: 15px; } header, .hero { align-items: flex-start; flex-direction: column; } .head-right { justify-content: flex-start; } .hero h2 { font-size: 29px; } .stats { gap: 8px; } .stat { padding: 12px; } .stat .value { font-size: 21px; } .filter-grid { grid-template-columns: 1fr 1fr; gap: 11px; } .field.search-field { grid-column: span 2; } .filter-actions { align-items: flex-start; flex-direction: column; } .action-group { width: 100%; } .action-group button { flex: 1; } .table-heading { align-items: flex-start; flex-direction: column; gap: 4px; } }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="brand">
+      <div class="logo" aria-hidden="true">◈</div>
+      <div><h1>Poké Idle <span style="color:var(--teal)">Market Monitor</span></h1><p>Painel independente de consulta</p></div>
+    </div>
+    <div class="head-right">
+      <div class="status"><span id="statusDot" class="dot"></span><span id="statusText">Conectando ao Market…</span></div>
+      <button id="refreshBtn" class="primary" type="button">↻ Atualizar agora</button>
+    </div>
+  </header>
+
+  <section class="hero">
+    <div><div class="eyebrow">Market intelligence</div><h2>Encontre anúncios com mais facilidade.</h2><p>Pesquise Pokémon e itens, compare IV, Quality e preço e acompanhe as atualizações do mercado em uma tabela organizada.</p></div>
+    <div class="readonly">● SOMENTE LEITURA · SEM TRANSAÇÕES</div>
+  </section>
+
+  <section class="stats" aria-label="Resumo do mercado">
+    <div class="stat"><div class="label">Anúncios recebidos</div><div class="value" id="totalListings">—</div><div class="hint">Dados retornados pela API</div></div>
+    <div class="stat"><div class="label">Resultados filtrados</div><div class="value" id="visibleListings">—</div><div class="hint">Após aplicar os filtros</div></div>
+    <div class="stat"><div class="label">Anúncios de Pokémon</div><div class="value" id="pokemonListings">—</div><div class="hint">Com IV e Quality disponíveis</div></div>
+    <div class="stat"><div class="label">Última atualização</div><div class="value" id="lastUpdated" style="font-size:18px">Aguardando</div><div class="hint" id="nextRefresh">Atualização automática ativa</div></div>
+  </section>
+
+  <section class="filters" aria-label="Filtros do market">
+    <div class="filter-top"><h3 class="filter-title">⌕ Filtros do mercado</h3><span class="filter-note">Os filtros são aplicados localmente aos dados recebidos</span></div>
+    <div class="filter-grid">
+      <div class="field search-field"><label for="search">Buscar anúncio</label><input id="search" type="search" placeholder="Pokémon, item ou tipo…" autocomplete="off"></div>
+      <div class="field"><label for="category">Categoria</label><select id="category"><option value="">Todas as categorias</option></select></div>
+      <div class="field"><label for="currency">Moeda</label><select id="currency"><option value="">Todas as moedas</option></select></div>
+      <div class="field"><label for="shiny">Shiny</label><select id="shiny"><option value="">Todos</option><option value="yes">Somente shiny</option><option value="no">Sem shiny</option></select></div>
+      <div class="field"><label>IV total</label><div class="range"><input id="ivMin" type="number" min="0" step="1" placeholder="Mín." aria-label="IV mínimo"><input id="ivMax" type="number" min="0" step="1" placeholder="Máx." aria-label="IV máximo"></div></div>
+      <div class="field"><label>Quality</label><div class="range"><input id="qualityMin" type="number" min="0" step="0.001" placeholder="Mín." aria-label="Quality mínima"><input id="qualityMax" type="number" min="0" step="0.001" placeholder="Máx." aria-label="Quality máxima"></div></div>
+      <div class="field"><label>Preço</label><div class="range"><input id="priceMin" type="number" min="0" step="1" placeholder="Mín." aria-label="Preço mínimo"><input id="priceMax" type="number" min="0" step="1" placeholder="Máx." aria-label="Preço máximo"></div></div>
+      <div class="field"><label>Nível</label><div class="range"><input id="levelMin" type="number" min="0" step="1" placeholder="Mín." aria-label="Nível mínimo"><input id="levelMax" type="number" min="0" step="1" placeholder="Máx." aria-label="Nível máximo"></div></div>
+      <div class="field"><label for="sort">Ordenar por</label><select id="sort"><option value="date_desc">Mais recentes</option><option value="price_asc">Menor preço</option><option value="price_desc">Maior preço</option><option value="iv_desc">Maior IV</option><option value="quality_desc">Maior Quality</option><option value="level_desc">Maior nível</option><option value="name_asc">Nome A–Z</option></select></div>
+    </div>
+    <div class="filter-actions">
+      <div class="left" id="filterSummary">Nenhum filtro aplicado</div>
+      <div class="action-group"><button id="resetBtn" class="subtle" type="button">Limpar filtros</button><button id="refreshBtnBottom" class="subtle" type="button">↻ Recarregar dados</button></div>
+    </div>
+  </section>
+
+  <div id="notice" class="notice" role="status"></div>
+  <section class="table-shell">
+    <div class="table-heading"><h3>▤ Anúncios do Market</h3><span id="tableMeta">Aguardando dados da API</span></div>
+    <div class="table-scroll">
+      <table>
+        <thead><tr><th>Pokémon / item</th><th>Nível</th><th>IV total</th><th>Quality</th><th>Quantidade</th><th>Preço</th><th>Publicado</th></tr></thead>
+        <tbody id="listingRows"><tr><td colspan="7"><div class="empty"><span class="spinner"></span>Conectando à API do Market…</div></td></tr></tbody>
+      </table>
+    </div>
+  </section>
+  <footer><span>Fonte: API pública do Market do Poké Idle World. Atualização automática a cada <b id="intervalLabel">30 s</b>.</span><span>Este painel não compra, vende nem envia ações ao jogo.</span></footer>
+</div>
+<script>
+(() => {
+  'use strict';
+  const REFRESH_MS = 30_000;
+  const $ = (id) => document.getElementById(id);
+  const filters = ['search','category','currency','shiny','ivMin','ivMax','qualityMin','qualityMax','priceMin','priceMax','levelMin','levelMax','sort'];
+  let allListings = [];
+  let lastUpdatedDate = null;
+  let nextRefreshAt = null;
+  let refreshTimer = null;
+  let countdownTimer = null;
+  let isRefreshing = false;
+
+  const fmtInt = (n) => Number.isFinite(Number(n)) ? new Intl.NumberFormat('pt-BR', { maximumFractionDigits: 0 }).format(Number(n)) : '—';
+  const fmtNum = (n, digits = 3) => Number.isFinite(Number(n)) ? new Intl.NumberFormat('pt-BR', { maximumFractionDigits: digits }).format(Number(n)) : '—';
+  const dateValue = (item) => item && item.at ? Date.parse(item.at) || 0 : 0;
+  const lower = (x) => String(x ?? '').toLocaleLowerCase('pt-BR');
+  const isPokemon = (x) => lower(x && (x.category || x.kind)).includes('pokemon') || (x && (x.ivTotal != null || x.quality != null || x.stats));
+  const val = (id) => $(id).value.trim();
+  const asNumber = (id) => val(id) === '' ? null : Number(val(id));
+  const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  const kindLabel = (item) => item.category || item.kind || 'Outro';
+  const nameInitials = (name) => {
+    const clean = String(name || '?').replace(/[^A-Za-zÀ-ÿ0-9 ]/g, ' ').trim();
+    return clean.split(/\s+/).slice(0,2).map(x => x[0] || '').join('').toUpperCase() || '?';
+  };
+  function showNotice(message, mode = '') {
+    const el = $('notice'); el.textContent = message; el.className = 'notice show' + (mode === 'error' ? ' error' : '');
+  }
+  function hideNotice() { $('notice').className = 'notice'; $('notice').textContent = ''; }
+  function status(text, mode) {
+    $('statusText').textContent = text;
+    $('statusDot').className = 'dot' + (mode === 'ok' ? ' ok' : mode === 'bad' ? ' bad' : '');
+  }
+  function updateCategoryOptions() {
+    const cat = $('category'), selected = cat.value;
+    const categories = [...new Set(allListings.map(x => String(x.category || x.kind || '').trim()).filter(Boolean))].sort((a,b)=>a.localeCompare(b,'pt-BR'));
+    cat.innerHTML = '<option value="">Todas as categorias</option>' + categories.map(c => `<option value="${esc(c)}">${esc(c)}</option>`).join('');
+    if (categories.includes(selected)) cat.value = selected;
+    const currency = $('currency'), oldCurrency = currency.value;
+    const currencies = [...new Set(allListings.map(x => String(x.currency || '').trim()).filter(Boolean))].sort();
+    currency.innerHTML = '<option value="">Todas as moedas</option>' + currencies.map(c => `<option value="${esc(c)}">${esc(c)}</option>`).join('');
+    if (currencies.includes(oldCurrency)) currency.value = oldCurrency;
+  }
+  function matches(item) {
+    const query = lower(val('search'));
+    const category = val('category'), currency = val('currency'), shiny = val('shiny');
+    const searchHaystack = [item.name, item.category, item.kind, item.type1, item.type2, item.currency, item.level, item.ivTotal, item.quality].map(lower).join(' ');
+    if (query && !searchHaystack.includes(query)) return false;
+    if (category && String(item.category || item.kind || '') !== category) return false;
+    if (currency && String(item.currency || '') !== currency) return false;
+    if (shiny === 'yes' && item.shiny !== true) return false;
+    if (shiny === 'no' && item.shiny === true) return false;
+    const tests = [
+      ['ivTotal','ivMin','ivMax'], ['quality','qualityMin','qualityMax'], ['price','priceMin','priceMax'], ['level','levelMin','levelMax']
+    ];
+    for (const [field,minId,maxId] of tests) {
+      const min = asNumber(minId), max = asNumber(maxId), raw = item[field];
+      if (min !== null || max !== null) {
+        if (raw === null || raw === undefined || raw === '' || !Number.isFinite(Number(raw))) return false;
+        const n = Number(raw);
+        if (min !== null && n < min) return false;
+        if (max !== null && n > max) return false;
+      }
+    }
+    return true;
+  }
+  function sortItems(items) {
+    const mode = val('sort');
+    const getNum = (x, k) => Number.isFinite(Number(x[k])) ? Number(x[k]) : -Infinity;
+    return items.sort((a,b) => {
+      if (mode === 'price_asc') return getNum(a,'price') - getNum(b,'price');
+      if (mode === 'price_desc') return getNum(b,'price') - getNum(a,'price');
+      if (mode === 'iv_desc') return getNum(b,'ivTotal') - getNum(a,'ivTotal');
+      if (mode === 'quality_desc') return getNum(b,'quality') - getNum(a,'quality');
+      if (mode === 'level_desc') return getNum(b,'level') - getNum(a,'level');
+      if (mode === 'name_asc') return String(a.name || '').localeCompare(String(b.name || ''),'pt-BR');
+      return dateValue(b) - dateValue(a);
+    });
+  }
+  function relativeDate(item) {
+    const t = dateValue(item); if (!t) return '—';
+    const delta = Math.max(0, Date.now() - t);
+    if (delta < 60_000) return 'agora';
+    if (delta < 3_600_000) return `há ${Math.floor(delta/60_000)} min`;
+    if (delta < 86_400_000) return `há ${Math.floor(delta/3_600_000)} h`;
+    return new Date(t).toLocaleDateString('pt-BR');
+  }
+  function statsSummary(item) {
+    if (!item.stats || typeof item.stats !== 'object') return '';
+    const labels = [['hp','HP'],['atk','Atk'],['def','Def'],['spAtk','Sp.Atk'],['spDef','Sp.Def'],['speed','Speed']];
+    return labels.filter(([k]) => item.stats[k] !== undefined).map(([k,l]) => `${l} ${item.stats[k]}`).join(' · ');
+  }
+  function rowHTML(item) {
+    const pokemon = isPokemon(item);
+    const types = [item.type1,item.type2].filter(Boolean).filter((x,i,a)=>a.indexOf(x)===i).map(t=>`<span class="tag">${esc(t)}</span>`).join('');
+    const shinyTag = item.shiny === true ? '<span class="tag shiny">✦ SHINY</span>' : '';
+    const stats = statsSummary(item);
+    const price = item.price == null ? '—' : fmtInt(item.price);
+    const quantity = item.quantity == null ? '—' : fmtInt(item.quantity);
+    const level = item.level == null ? '—' : fmtInt(item.level);
+    const iv = item.ivTotal == null ? '—' : fmtInt(item.ivTotal);
+    const quality = item.quality == null ? '—' : fmtNum(item.quality, 4);
+    const initial = nameInitials(item.name);
+    const icon = String(item.icon || '').trim();
+    const iconMarkup = icon && /^(https?:|data:image\/)/i.test(icon)
+      ? `<img src="${esc(icon)}" alt="" loading="lazy" referrerpolicy="no-referrer" onerror="this.parentElement.textContent='${esc(initial)}'">`
+      : esc(initial);
+    const offer = item.offerOnly === true ? '<span class="tag">Oferta</span>' : item.hasOffers === true ? '<span class="tag">Recebe ofertas</span>' : '';
+    return `<tr>
+      <td><div class="pokemon"><div class="sprite">${iconMarkup}</div><div><div class="name">${esc(item.name || 'Anúncio sem nome')}</div><div class="sub">${esc(kindLabel(item))}${item.speciesId != null ? ` · #${esc(item.speciesId)}` : ''}${item.sellers != null ? ` · ${esc(item.sellers)} vendedor(es)` : ''}</div><div>${types}${shinyTag}${offer}</div></div></div></td>
+      <td class="number">${level}</td><td class="number">${iv}</td><td class="quality">${quality}</td><td class="number">${quantity}</td>
+      <td><div class="price">${price}</div><div class="currency">${esc(item.currency || '')}</div></td>
+      <td><span title="${esc(item.at || '')}">${relativeDate(item)}</span>${stats ? `<div class="sub">${esc(stats)}</div>` : ''}</td>
+    </tr>`;
+  }
+  function render() {
+    const result = sortItems(allListings.filter(matches));
+    $('totalListings').textContent = fmtInt(allListings.length);
+    $('visibleListings').textContent = fmtInt(result.length);
+    $('pokemonListings').textContent = fmtInt(allListings.filter(isPokemon).length);
+    $('tableMeta').textContent = `${fmtInt(result.length)} resultado(s) · ${fmtInt(allListings.length)} anúncio(s) no retorno da API`;
+    const active = filters.reduce((n,id) => {
+      if (id === 'sort') return n;
+      const el = $(id); return n + (el.value.trim() !== '' ? 1 : 0);
+    },0);
+    $('filterSummary').textContent = active ? `${active} filtro(s) preenchido(s)` : 'Nenhum filtro aplicado';
+    if (!result.length) {
+      $('listingRows').innerHTML = '<tr><td colspan="7"><div class="empty"><strong>Nenhum anúncio encontrado</strong>Tente remover alguns filtros ou alterar a pesquisa.</div></td></tr>';
+      return;
+    }
+    $('listingRows').innerHTML = result.map(rowHTML).join('');
+  }
+  async function refresh() {
+    if (isRefreshing) return;
+    isRefreshing = true;
+    $('refreshBtn').disabled = true; $('refreshBtnBottom').disabled = true;
+    $('refreshBtn').innerHTML = '<span class="spinner"></span>Atualizando';
+    if (!allListings.length) $('listingRows').innerHTML = '<tr><td colspan="7"><div class="empty"><span class="spinner"></span>Consultando a API do Market…</div></td></tr>';
+    try {
+      const response = await fetch('/api/market', { cache: 'no-store', headers: { 'Accept': 'application/json' } });
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(data.error || `Erro HTTP ${response.status}`);
+      if (!Array.isArray(data.listings)) throw new Error('A resposta não contém a lista de anúncios.');
+      allListings = data.listings;
+      lastUpdatedDate = data.fetchedAt ? new Date(data.fetchedAt) : new Date();
+      $('lastUpdated').textContent = lastUpdatedDate.toLocaleTimeString('pt-BR', {hour:'2-digit',minute:'2-digit',second:'2-digit'});
+      updateCategoryOptions(); render();
+      if (data.stale) {
+        status('Dados em cache · API indisponível', 'bad');
+        showNotice(`A API falhou na última tentativa. Exibindo os últimos dados recebidos. ${data.warning || ''}`.trim(), 'error');
+      } else {
+        status('Market conectado', 'ok'); hideNotice();
+      }
+      nextRefreshAt = Date.now() + REFRESH_MS;
+    } catch (err) {
+      status('Falha na conexão', 'bad');
+      showNotice(`Não foi possível obter os anúncios: ${err.message}. Confira a internet e tente novamente. Se a API exigir autenticação da sua sessão, a integração precisará de uma forma oficial/autorizada de acesso.`, 'error');
+      if (!allListings.length) $('listingRows').innerHTML = `<tr><td colspan="7"><div class="empty"><strong>Não foi possível carregar o Market</strong>${esc(err.message)}<br>Verifique a conexão e clique em “Atualizar agora”.</div></td></tr>`;
+    } finally {
+      isRefreshing = false; $('refreshBtn').disabled = false; $('refreshBtnBottom').disabled = false;
+      $('refreshBtn').textContent = '↻ Atualizar agora';
+    }
+  }
+  function startTimers() {
+    if (refreshTimer) clearInterval(refreshTimer);
+    if (countdownTimer) clearInterval(countdownTimer);
+    refreshTimer = setInterval(refresh, REFRESH_MS);
+    countdownTimer = setInterval(() => {
+      if (!nextRefreshAt) { $('nextRefresh').textContent = 'Atualização automática ativa'; return; }
+      const remain = Math.max(0, Math.ceil((nextRefreshAt - Date.now()) / 1000));
+      $('nextRefresh').textContent = `Próxima atualização em ${remain}s`;
+    }, 1000);
+  }
+  filters.forEach(id => $(id).addEventListener(id === 'search' ? 'input' : 'change', render));
+  $('refreshBtn').addEventListener('click', refresh);
+  $('refreshBtnBottom').addEventListener('click', refresh);
+  $('resetBtn').addEventListener('click', () => {
+    filters.forEach(id => { if (id === 'sort') $(id).value = 'date_desc'; else $(id).value = ''; });
+    render();
+  });
+  $('intervalLabel').textContent = `${REFRESH_MS/1000} s`;
+  startTimers(); refresh();
+})();
+</script>
+</body>
+</html>
